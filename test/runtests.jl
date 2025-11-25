@@ -75,14 +75,14 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             @test isapprox(teststat(lme2), (28731.976842989556, 635.1750307060438, 17.210623194472724, 46.16338718571525, 14.321381335479893))
             @test isapprox(teststat(aovf), (28899.81231026455, 714.3647106859062, 19.19804098862722, 45.425989531937134))
             @test isapprox(deviance(aovlr), tuple(lr.deviance...))
-            @test isapprox(filter(!isnan, pval(aovlr)), tuple(lr.pvalues...))
+            @test isapprox(filter(!isnan, pval(aovlr)), tuple(lr.pvalues...)[2:end])
             @test lme3.anovamodel.model.optsum.REML 
             @test !last(lme1.anovamodel.model).optsum.REML
             @test prednames(lmm2) == ["(Intercept)",  "occasion", "sex", "job", "occasion & sex"]
         end 
         @testset "Cross random effect on slope and intercept" begin
-            lmm1 = lme(@formula(gpa ~ occasion + (1|student)), gpa, REML = true)
-            lmm2 = lme(@formula(gpa ~ occasion + (occasion|student)), gpa, REML = true)
+            lmm1 = lme(@formula(gpa ~ occasion + (1|student)), gpa)
+            lmm2 = lme(@formula(gpa ~ occasion + (occasion|student)), gpa)
             global aovlr = anova(lmm1, lmm2)
             global aovf = anova(lmm2)
             lr = MixedModels.likelihoodratiotest(lmm1, lmm2)
@@ -92,7 +92,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             @test dof(aovlr) == tuple(lr.dof...)
             @test dof_residual(aovf) == (1000, 198)
             @test isapprox(deviance(aovlr), tuple(lr.deviance...))
-            @test isapprox(filter(!isnan, pval(aovlr)), tuple(lr.pvalues...))
+            @test isapprox(filter(!isnan, pval(aovlr)), tuple(lr.pvalues...)[2:end])
         end
         @testset "Nested random effects" begin
             lmm1 = lme(@formula(stress ~ age  + sex + experience + treatment + wardtype + hospsize + (1|hospital)), nurses)
@@ -104,7 +104,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
             @test dof(aov) == tuple(lr.dof...)
             @test dof_residual_pred(lmm2) == (897, 897, 897, 897, 73, 73, 22)
             @test isapprox(deviance(aov), tuple(lr.deviance...))
-            @test isapprox(filter(!isnan, pval(aov)), tuple(lr.pvalues...))
+            @test isapprox(filter(!isnan, pval(aov)), tuple(lr.pvalues...)[2:end])
         end
         #=
         @testset "Random effects on slope and intercept" begin
@@ -149,8 +149,8 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
         @test !(@test_error test_show(aov))
         @test first(nobs(aov)) == nobs(lmm1)
         @test dof(aov) == tuple(lr.dof...)
-        @test isapprox(deviance(aov), tuple(lr.deviance...))
-        @test isapprox(pval(aov)[2:end], tuple(lr.pvalues...))
+        @test isapprox(deviance(aov), -2 .* tuple(lr.loglikelihood...))
+        @test isapprox(pval(aov)[2:end], tuple(lr.pvalues...)[2:end])
     end
     
     @testset "GeneralizedLinearModel and GeneralizedLinearMixedModel" begin
@@ -165,7 +165,7 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
         @test !(@test_error test_show(aovg))
         @test first(nobs(aov)) == nobs(glmm1)
         @test dof(aov) == tuple(lr.dof...)
-        @test isapprox(deviance(aov), tuple(lr.deviance...))
-        @test isapprox(pval(aov)[2:end], tuple(lr.pvalues...))
+        @test isapprox(deviance(aov), -2 .* tuple(lr.loglikelihood...))
+        @test isapprox(pval(aov)[2:end], tuple(lr.pvalues...)[2:end])
     end    
 end

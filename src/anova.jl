@@ -1,10 +1,10 @@
 # ============================================================================================================
 # Main API
 """
-    anova(<mixedmodels>...; test::Type{<: GoodnessOfFit}, <keyword arguments>)
-    anova(<anovamodel>; test::Type{<: GoodnessOfFit}, <keyword arguments>)
-    anova(test::Type{<: GoodnessOfFit}, <mixedmodels>...; <keyword arguments>)
-    anova(test::Type{<: GoodnessOfFit}, <anovamodel>; <keyword arguments>)
+    anova(mixedmodels...; test::Type{<: GoodnessOfFit}, keyword_arguments...)
+    anova(anovamodel; test::Type{<: GoodnessOfFit}, keyword_arguments...)
+    anova(test::Type{<: GoodnessOfFit}, mixedmodels...; keyword_arguments...)
+    anova(test::Type{<: GoodnessOfFit}, anovamodel; keyword_arguments...)
 
 Analysis of variance.
 
@@ -16,9 +16,10 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
     2. `GeneralizedLinearMixedModel` fitted by `AnovaMixedModels.glme` or `fit(GeneralizedLinearMixedModel, ...)`
     If mutiple models are provided, they should be nested and the last one is the most complex. The first model can also be the corresponding `GLM` object without random effects.
 * `anovamodel`: wrapped model objects; `FullModel` and `NestedModels`.
-* `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) ([`LRT`](@ref)) and [`FTest`](@ref). The default is based on the model type.
+* `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) (`LRT`) and [`FTest`](@ref). The default is based on the model type.
     1. `LinearMixedModel`: `FTest` for one model; `LRT` for nested models.
     2. `GeneralizedLinearMixedModel`: `LRT` for nested models.
+    Models should not be fitted by REML for `LRT`. 
 
 # Other keyword arguments
 * When one model is provided:  
@@ -148,11 +149,11 @@ function anova(::Type{LikelihoodRatioTest},
     ord = sortperm(collect(df))
     df = df[ord]
     models = models[ord]
-    lrt_nested(NestedModels(models), df, deviance.(models), 1)
+    lrt_nested(NestedModels(models), df, deviance_mixedmodel.(models), 1)
 end
 
 anova(::Type{LikelihoodRatioTest}, aovm::NestedModels{M}) where {M <: MixedModel} = 
-    lrt_nested(aovm, dof.(aovm.model), deviance.(aovm.model), 1)
+    lrt_nested(aovm, dof.(aovm.model), deviance_mixedmodel.(aovm.model), 1)
 
 #=
 function anova(::Type{LikelihoodRatioTest}, 
@@ -184,7 +185,8 @@ function anova(
     models = (m0, m[ord]...)
     # isnested is not part of _iscomparable:  
     # isnested = true 
-    dev = (_criterion(m0), deviance.(models[2:end])...)
+    # dev = (_criterion(m0), deviance.(models[2:end])...)
+    dev = deviance_mixedmodel.(models)
     lrt_nested(MixedAovModels{Union{M, T}, length(models)}(models), df, dev, 1)
 end
 
@@ -195,11 +197,11 @@ anova(::Type{LikelihoodRatioTest}, aovm::MixedAovModels{M}) where {M <:  Union{G
 # Fit new models
 
 """
-    anova_lme(f::FormulaTerm, tbl; test::Type{<: GoodnessOfFit} = FTest, <keyword arguments>)
+    anova_lme(f::FormulaTerm, tbl; test::Type{<: GoodnessOfFit} = FTest, keyword_arguments...)
 
-    anova_lme(test::Type{<: GoodnessOfFit}, f::FormulaTerm, tbl; <keyword arguments>)
+    anova_lme(test::Type{<: GoodnessOfFit}, f::FormulaTerm, tbl; keyword_arguments...)
 
-    anova(test::Type{<: GoodnessOfFit}, ::Type{<: LinearMixedModel}, f::FormulaTerm, tbl; <keyword arguments>)
+    anova(test::Type{<: GoodnessOfFit}, ::Type{<: LinearMixedModel}, f::FormulaTerm, tbl; keyword_arguments...)
 
 ANOVA for linear mixed-effect models.
 

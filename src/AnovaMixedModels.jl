@@ -4,7 +4,7 @@ using Statistics, StatsBase, LinearAlgebra, Distributions, Reexport, Printf, GLM
 @reexport using MixedModels, AnovaBase
 import StatsBase: fit!, fit
 import MixedModels: FeMat, createAL, reweight!, getθ,
-                     _iscomparable, _criterion,
+                     _iscomparable, 
                      deviance, dof, dof_residual, nobs
 import StatsModels: RegressionModel, TableRegressionModel, vectorize, asgn, hasintercept
 import AnovaBase: anova, nestedmodels, predictors, lrt_nested, _diff, subformula, dof_asgn,

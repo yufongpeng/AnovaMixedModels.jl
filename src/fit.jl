@@ -1,8 +1,7 @@
 # ==========================================================================================================
 predictors(model::T) where {T <: MixedModel} = first(formula(model).rhs).terms
 
-deviance_mixedmodel(model::MixedModel) = deviance(model)
-deviance_mixedmodel(model::GLM_MODEL) = _criterion(model)
+deviance_mixedmodel(model) = -2 * loglikelihood(model)
 
 lhs_no_intercept(lhs::String) = Set([lhs])
 lhs_no_intercept(lhs) = Set(filter!(!=("(Intercept)"), lhs))
@@ -94,6 +93,7 @@ function nestedmodels(model::M; null::Bool = true, kwargs...) where {M <: Linear
     size(X, 2) > 0 && (X = pivot == collect(1:size(X, 2)) ? X : X[:, pivot])
     reterms = deepcopy(model.reterms)
     sqrtwts = copy(model.sqrtwts)
+    σ = model.optsum.sigma
     models = map(range) do id
         subf = subformula(f.lhs, f.rhs, id)
         cnames = coefnames(first(subf.rhs))
@@ -106,10 +106,9 @@ function nestedmodels(model::M; null::Bool = true, kwargs...) where {M <: Linear
         Xy = MixedModels.FeMat(feterm, vec(y))
         reweight!(Xy, sqrtwts)
         A, L = createAL(reterms, Xy)
-        lbd = foldl(vcat, lowerbd(c) for c in reterms)
         θ = foldl(vcat, getθ(c) for c in reterms)
-        optsum = OptSummary(θ, lbd, :LN_BOBYQA, ftol_rel = T(1.0e-12), ftol_abs = T(1.0e-8))
-        fill!(optsum.xtol_abs, 1.0e-10)
+        optsum = OptSummary(θ)
+        optsum.sigma = isnothing(σ) ? nothing : T(σ)
         lmm = LinearMixedModel(
             subf,
             reterms,
