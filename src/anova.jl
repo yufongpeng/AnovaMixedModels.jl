@@ -12,8 +12,8 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
 
 # Arguments
 * `mixedmodels`: model objects
-    1. `LinearMixedModel` fitted by `AnovaMixedModels.lme` or `fit(LinearMixedModel, ...)`
-    2. `GeneralizedLinearMixedModel` fitted by `AnovaMixedModels.glme` or `fit(GeneralizedLinearMixedModel, ...)`
+    1. `LinearMixedModel` fitted by `MixedModels.lmm` or `fit(LinearMixedModel, ...)`
+    2. `GeneralizedLinearMixedModel` fitted by `MixedModels.glmm` or `fit(GeneralizedLinearMixedModel, ...)`
     If mutiple models are provided, they should be nested and the last one is the most complex. The first model can also be the corresponding `GLM` object without random effects.
 * `anovamodel`: wrapped model objects; `FullModel` and `NestedModels`.
 * `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) (`LRT`) and [`FTest`](@ref). The default is based on the model type.
@@ -29,7 +29,7 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
     1. `check`: allows to check if models are nested. Defalut value is true. Some checkers are not implemented now.
 
 !!! note
-    For fitting new models and conducting anova at the same time, see [`anova_lme`](@ref) for `LinearMixedModel`.
+    For fitting new models and conducting anova at the same time, see [`anova_lmm`](@ref) for `LinearMixedModel`.
 !!! note
     The result with `adjust_sigma` will be slightly deviated from that of model fitted directly by REML.
 !!! note
@@ -145,7 +145,7 @@ function anova(::Type{LikelihoodRatioTest},
         ArgumentError("""Models are not comparable: are the objectives, data and, where appropriate, the link and family the same?""")))
     # _isnested (by QR) or isnested (by formula) are not part of _iscomparable:  
     # isnested = true  
-    df = dof.(models)
+    df = dof_aov.(models)
     ord = sortperm(collect(df))
     df = df[ord]
     models = models[ord]
@@ -153,7 +153,7 @@ function anova(::Type{LikelihoodRatioTest},
 end
 
 anova(::Type{LikelihoodRatioTest}, aovm::NestedModels{M}) where {M <: MixedModel} = 
-    lrt_nested(aovm, dof.(aovm.model), deviance_mixedmodel.(aovm.model), 1)
+    lrt_nested(aovm, dof_aov.(aovm.model), deviance_mixedmodel.(aovm.model), 1)
 
 #=
 function anova(::Type{LikelihoodRatioTest}, 
@@ -179,9 +179,9 @@ function anova(
     check && (_iscomparable(m, ms...) || throw(
         ArgumentError("""Models are not comparable: are the objectives, data and, where appropriate, the link and family the same?""")))
     m = [m, ms...]
-    df = dof.(m)
+    df = dof_aov.(m)
     ord = sortperm(df)
-    df = (dof(m0), df[ord]...)
+    df = (dof_aov(m0), df[ord]...)
     models = (m0, m[ord]...)
     # isnested is not part of _iscomparable:  
     # isnested = true 
@@ -191,15 +191,15 @@ function anova(
 end
 
 anova(::Type{LikelihoodRatioTest}, aovm::MixedAovModels{M}) where {M <:  Union{GLM_MODEL, MixedModel}} = 
-    lrt_nested(aovm, df = dof.(aovm.model), deviance_mixedmodel.(aovm.model), 1)
+    lrt_nested(aovm, dof_aov.(aovm.model), deviance_mixedmodel.(aovm.model), 1)
 
 # =================================================================================================================================
 # Fit new models
 
 """
-    anova_lme(f::FormulaTerm, tbl; test::Type{<: GoodnessOfFit} = FTest, keyword_arguments...)
+    anova_lmm(f::FormulaTerm, tbl; test::Type{<: GoodnessOfFit} = FTest, keyword_arguments...)
 
-    anova_lme(test::Type{<: GoodnessOfFit}, f::FormulaTerm, tbl; keyword_arguments...)
+    anova_lmm(test::Type{<: GoodnessOfFit}, f::FormulaTerm, tbl; keyword_arguments...)
 
     anova(test::Type{<: GoodnessOfFit}, ::Type{<: LinearMixedModel}, f::FormulaTerm, tbl; keyword_arguments...)
 
@@ -221,16 +221,16 @@ ANOVA for linear mixed-effect models.
 * `progress::Bool = true`
 * `REML::Bool = true`
 
-`anova_lme` generate a `LinearMixedModel` fitted with REML if applying [`FTest`](@ref); otherwise, a model fitted with ML.
+`anova_lmm` generate a `LinearMixedModel` fitted with REML if applying [`FTest`](@ref); otherwise, a model fitted with ML.
 !!! note
     The result with `adjust_sigma` will be slightly deviated from that of model fitted directly by REML.
 """
-anova_lme(f::FormulaTerm, tbl; 
+anova_lmm(f::FormulaTerm, tbl; 
         test::Type{<: GoodnessOfFit} = FTest,
         kwargs...) = 
     anova(test, LinearMixedModel, f, tbl; kwargs...)
 
-anova_lme(test::Type{<: GoodnessOfFit}, f::FormulaTerm, tbl; 
+anova_lmm(test::Type{<: GoodnessOfFit}, f::FormulaTerm, tbl; 
         kwargs...) = 
     anova(test, LinearMixedModel, f, tbl; kwargs...)
 
@@ -240,28 +240,6 @@ function anova(test::Type{<: GoodnessOfFit}, ::Type{<: LinearMixedModel}, f::For
         progress::Bool = true, 
         REML::Bool = test == FTest ? true : false, 
         kwargs...)
-    model = lme(f, tbl; wts, contrasts, progress, REML)
+    model = lmm(f, tbl; wts, contrasts, progress, REML)
     anova(test, model; kwargs...)
 end
-
-"""
-    lme(f::FormulaTerm, tbl; wts, contrasts, progress, REML)
-
-An alias for `fit(LinearMixedModel, f, tbl; wts, contrasts, progress, REML)`.
-"""
-lme(f::FormulaTerm, tbl; 
-    wts = [], 
-    contrasts = Dict{Symbol, Any}(), 
-    progress::Bool = true, 
-    REML::Bool = false) = 
-    fit(LinearMixedModel, f, tbl; 
-        wts, contrasts, progress, REML)
-
-"""
-    glme(f::FormulaTerm, tbl, d::Distribution, l::Link; kwargs...)
-
-An alias for `fit(GeneralizedLinearMixedModel, f, tbl, d, l; kwargs...)`
-"""
-glme(f::FormulaTerm, tbl, d::Distribution = Normal(), l::Link = canonicallink(d);
-    kwargs...) = 
-    fit(GeneralizedLinearMixedModel, f, tbl, d, l; kwargs...)

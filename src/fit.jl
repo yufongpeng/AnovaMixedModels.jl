@@ -1,5 +1,5 @@
 # ==========================================================================================================
-predictors(model::T) where {T <: MixedModel} = first(formula(model).rhs).terms
+predictors(model::T) where {T <: MixedModel} = first(formula_aov(model).rhs).terms
 
 deviance_mixedmodel(model) = -2 * loglikelihood(model)
 
@@ -74,7 +74,7 @@ end
 dof_residual_pred(aovm::FullModel{<: LinearMixedModel}) = getindex.(Ref(dof_residual_pred(aovm.model)), aovm.pred_id)
 
 """
-    nestedmodels(model::LinearMixedModel; null::Bool = true, <keyword arguments>)
+    nestedmodels(model::LinearMixedModel; null::Bool = true, keyword_arguments...)
 
     nestedmodels(::Type{LinearMixedModel}, f::FormulaTerm, tbl; null::Bool = true, wts = [], contrasts = Dict{Symbol, Any}(), verbose::Bool = false, REML::Bool = false)
 
@@ -140,3 +140,7 @@ isnullable(::LinearMixedModel) = true
 
 # Specialized dof_residual
 dof_residual(aov::AnovaResult{<: FullModel{<: MixedModel}, FTest}) = aov.otherstat.dof_residual
+
+dof_aov(model::LinearMixedModel) = dof(model) - 1
+dof_aov(model::GeneralizedLinearMixedModel{T, D}) where {T, D <: FixDispDist} = dof(model)
+dof_aov(model::GeneralizedLinearMixedModel{T, D}) where {T, D} = dof(model) - 1
