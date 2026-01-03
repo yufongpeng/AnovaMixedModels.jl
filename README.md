@@ -12,3 +12,5 @@
 [ci-url]: https://github.com/yufongpeng/AnovaMixedModels.jl/actions?query=workflow%3ACI
 [codecov-img]: https://codecov.io/gh/yufongpeng/AnovaMixedModels.jl/branch/main/graph/badge.svg?token=LVGAB9uiWn
 [codecov-url]: https://codecov.io/gh/yufongpeng/AnovaMixedModels.jl
+
+*AnovaMixedModels.jl* is a Julia package providing one-way and multi-way anova in Julia with models from `MixedModels.jl`.
