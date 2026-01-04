@@ -18,7 +18,7 @@ To be noticed, my implementation is a little different from the reference one.
 When intercept is not in fix effects, the reference algorithm regards the first term as intercept; however, there is no such replacement here. 
 """
 function dof_residual_pred(model::LinearMixedModel)
-    randoms = collect(formula(model).rhs) # ranef formula terms
+    randoms = collect(formula_aov(model).rhs) # ranef formula terms
     fixs = popfirst!(randoms) # fixef formula terms
     isempty(randoms) && (return repeat([nobs(model) - length(fixs.terms)], length(fixs.terms)))
     reterms = reverse(model.reterms) # Vector of ReMat
@@ -82,7 +82,7 @@ Generate nested models from a model or modeltype, formula and data.
 The null model will be an empty model if the keyword argument `null` is true (default).
 """
 function nestedmodels(model::M; null::Bool = true, kwargs...) where {M <: LinearMixedModel}
-    f = formula(model)
+    f = formula_aov(model)
     range = null ? (0:length(f.rhs[1].terms) - 1) : (1:length(f.rhs[1].terms) - 1)
     assign = asgn(first(f.rhs))
     REML = model.optsum.REML

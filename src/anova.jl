@@ -15,7 +15,7 @@ Return `AnovaResult{M, test, N}`. See [`AnovaResult`](@ref) for details.
     1. `LinearMixedModel` fitted by `MixedModels.lmm` or `fit(LinearMixedModel, ...)`
     2. `GeneralizedLinearMixedModel` fitted by `MixedModels.glmm` or `fit(GeneralizedLinearMixedModel, ...)`
     If mutiple models are provided, they should be nested and the last one is the most complex. The first model can also be the corresponding `GLM` object without random effects.
-* `anovamodel`: wrapped model objects; `FullModel` and `NestedModels`.
+* `anovamodel`: wrapped model objects; `FullModel`, `NestedModels`, and `MixedAovModels`.
 * `test`: test statistics for goodness of fit. Available tests are [`LikelihoodRatioTest`](@ref) (`LRT`) and [`FTest`](@ref). The default is based on the model type.
     1. `LinearMixedModel`: `FTest` for one model; `LRT` for nested models.
     2. `GeneralizedLinearMixedModel`: `LRT` for nested models.
@@ -51,6 +51,12 @@ anova(aovm::NestedModels{M};
         test::Type{<: GoodnessOfFit} = LRT, 
         kwargs...) where {M <: MixedModel} = 
     anova(test, aovm; kwargs...)
+
+anova(aovm::MixedAovModels{M}; 
+        test::Type{<: GoodnessOfFit} = LRT,
+        kwargs...) where {M <: Union{<: GLM_MODEL, <: MixedModel}} = 
+    anova(test, aovm; kwargs...)
+
 # ==================================================================================================================
 # ANOVA by F test
 # Linear mixed-effect models
@@ -114,23 +120,23 @@ end
 # ANOVA by Likehood-ratio test 
 # Linear mixed-effect models
 
-function anova(::Type{LRT}, model::M) where {M <: LinearMixedModel}
+function anova(::Type{LRT}, model::M; kwargs...) where {M <: LinearMixedModel}
     # check if fitted by ML 
     # nested random effects for REML ?
     model.optsum.REML && throw(
         ArgumentError("""Likelihood-ratio tests for REML-fitted models are only valid when the fixed-effects specifications are identical"""))
     @warn "Fit all submodels"
-    models = nestedmodels(model; null = isnullable(model))
+    models = nestedmodels(model; null = isnullable(model), kwargs...)
     anova(LRT, models)
 end
 
-function anova(::Type{LRT}, aovm::FullModel{M}) where {M <: LinearMixedModel}
+function anova(::Type{LRT}, aovm::FullModel{M}; kwargs...) where {M <: LinearMixedModel}
     # check if fitted by ML 
     # nested random effects for REML ?
     aovm.model.optsum.REML && throw(
         ArgumentError("""Likelihood-ratio tests for REML-fitted models are only valid when the fixed-effects specifications are identical"""))
     @warn "Fit all submodels"
-    models = nestedmodels(aovm.model; null = isnullable(aovm.model))
+    models = nestedmodels(aovm.model; null = isnullable(aovm.model), kwargs...)
     anova(LRT, models)
 end
 
@@ -210,16 +216,20 @@ ANOVA for linear mixed-effect models.
 * `tbl`: a `Tables.jl` compatible data.
 * `test`: `GoodnessOfFit`. The default is `FTest`.
 
-# Keyword arguments
+# Anova keyword arguments
 * `test`: `GoodnessOfFit`. The default is `FTest`.
 * `type`: type of anova (1, 2 or 3). Default value is 1.
 * `adjust_sigma`: whether adjust σ to match that of linear mixed-effect model fitted by REML. The result will be slightly deviated from that of model fitted by REML.
 
-# Other keyword arguments
+# Model keyword arguments
 * `wts = []`
 * `contrasts = Dict{Symbol,Any}()`
 * `progress::Bool = true`
 * `REML::Bool = true`
+
+# Other keyword arguments
+For `LRT`, `NestedModels` is generated with the leftover keyword arguments using `nestedmodels`.
+For `FTest`, no other keyword arguments can be accepted.
 
 `anova_lmm` generate a `LinearMixedModel` fitted with REML if applying [`FTest`](@ref); otherwise, a model fitted with ML.
 !!! note

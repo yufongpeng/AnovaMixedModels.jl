@@ -145,12 +145,14 @@ isapprox(x::NTuple{N, Float64}, y::NTuple{N, Float64}, atol::NTuple{N, Float64} 
         lmm1 = lmm(@formula(score ~ group * time + (1|id)), anxiety)
         lmm2 = lmm(@formula(score ~ group * time + (group|id)), anxiety)
         global aov = anova(lm1, lmm1, lmm2)
+        global aov2 = anova(MixedAovModels(lm1, lmm1, lmm2))
         lr = MixedModels.likelihoodratiotest(lm1, lmm1, lmm2)
         @test !(@test_error test_show(aov))
         @test first(nobs(aov)) == nobs(lmm1)
         @test dof(aov) == tuple(lr.dof...) .- 1
         @test isapprox(deviance(aov), -2 .* tuple(lr.loglikelihood...))
         @test isapprox(pval(aov)[2:end], tuple(lr.pvalues...)[2:end])
+        @test isapprox(teststat(aov)[2:end], teststat(aov2)[2:end])
     end
     
     @testset "GeneralizedLinearModel and GeneralizedLinearMixedModel" begin

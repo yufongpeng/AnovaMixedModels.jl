@@ -18,9 +18,9 @@ version = "0.9.0"
 
 [[deps.AnovaGLM]]
 deps = ["AnovaBase", "Distributions", "GLM", "LinearAlgebra", "Printf", "Reexport", "Statistics", "StatsBase", "StatsModels"]
-git-tree-sha1 = "d5dc492ed82b24a05cc392ee21413c4b9f93d918"
+git-tree-sha1 = "d7cbc6fa63f8a3cb60dc77994dbecc2f711ffe26"
 uuid = "0a47a8e3-ec57-451e-bddb-e0be9d22772b"
-version = "0.2.7"
+version = "0.2.8"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
